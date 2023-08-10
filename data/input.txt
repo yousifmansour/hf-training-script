@@ -1,0 +1,101 @@
+from peft import LoraConfig
+from peft import AutoPeftModelForCausalLM
+import torch
+import os
+from datasets import load_dataset
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments, AutoTokenizer
+
+from trl import SFTTrainer
+
+
+# Define the arguments
+
+model_name = "distilgpt2"
+dataset_name = "timdettmers/openassistant-guanaco"
+load_in_8bit = False
+load_in_4bit = True
+use_peft = True
+peft_lora_r = 64
+peft_lora_alpha = 16
+output_dir = "output"
+batch_size = 16
+gradient_accumulation_steps = 16
+learning_rate = 1.41e-5
+logging_steps = 1
+num_train_epochs = 3
+dataset_text_field = "text"
+max_steps = -1
+
+# Step 1: Load the model
+if load_in_8bit and load_in_4bit:
+    raise ValueError(
+        "You can't load the model in 8 bits and 4 bits at the same time")
+elif load_in_8bit or load_in_4bit:
+    quantization_config = BitsAndBytesConfig(
+        load_in_8bit=load_in_8bit, load_in_4bit=load_in_4bit
+    )
+    # This means: fit the entire model on the GPU:0
+    device_map = {"": 0}
+    torch_dtype = torch.bfloat16
+else:
+    device_map = None
+    quantization_config = None
+    torch_dtype = None
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    quantization_config=quantization_config,
+    device_map=device_map,
+    trust_remote_code=False,
+    torch_dtype=torch_dtype,
+)
+
+# Step 2: Load the dataset
+dataset = load_dataset(dataset_name, split="train")
+
+# Step 3: Define the training arguments
+training_args = TrainingArguments(
+    output_dir=output_dir,
+    per_device_train_batch_size=batch_size,
+    gradient_accumulation_steps=gradient_accumulation_steps,
+    learning_rate=learning_rate,
+    logging_steps=logging_steps,
+    num_train_epochs=num_train_epochs,
+    max_steps=max_steps,
+)
+
+# Step 4: Define the LoraConfig
+if use_peft:
+    peft_config = LoraConfig(
+        r=peft_lora_r,
+        lora_alpha=peft_lora_alpha,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
+else:
+    peft_config = None
+
+# Step 5: Define the Trainer
+trainer = SFTTrainer(
+    model=model,
+    args=training_args,
+    train_dataset=dataset,
+    dataset_text_field=dataset_text_field,
+    peft_config=peft_config,
+)
+
+trainer.train()
+
+final_checkpoints_dir = os.path.join(output_dir, "final_checkpoints")
+trainer.model.save_pretrained(final_checkpoints_dir)
+
+# Free memory for merging weights
+del model
+torch.cuda.empty_cache()
+
+model = AutoPeftModelForCausalLM.from_pretrained(
+    final_checkpoints_dir, device_map="auto", torch_dtype=torch.bfloat16)
+model = model.merge_and_unload()
+
+output_merged_dir = os.path.join(output_dir, "final_merged_checkpoint")
+model.save_pretrained(output_merged_dir, safe_serialization=True)
