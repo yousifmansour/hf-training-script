@@ -22,7 +22,7 @@ with open("config.json", "r") as f:
 print("Step 1: Load arguments")
 load_in_4bit = get_config_value(config, "load_in_4bit", True)
 load_in_8bit = get_config_value(config, "load_in_8bit", False)
-model_name = get_config_value(config, "model_name", "gpt2")
+model_name = get_config_value(config, "model_name", "EleutherAI/gpt-neo-125m")
 data_dir = get_config_value(config, "data_dir", "./data")
 output_dir = get_config_value(config, "output_dir", "./output")
 model_max_length = get_config_value(config, "model_max_length", 1024)
@@ -36,10 +36,15 @@ max_steps = get_config_value(config, "max_steps", -1)
 use_peft = get_config_value(config, "use_peft", False)
 peft_lora_r = get_config_value(config, "peft_lora_r", 64)
 peft_lora_alpha = get_config_value(config, "peft_lora_alpha", 16)
-hf_token = get_config_value(config, "hf_token", None)
 hf_repo_name = get_config_value(
     config, "hf_repo_name", model_name + "-" + datetime.datetime.now().strftime("%Y_%m_%d"))
 
+# Step 1.1: If hf_token is not None, login to the Hub
+hf_token = get_config_value(config, "hf_token", None)
+if hf_token:
+    print("Step 1.1: Login to the Hub")
+    login(token=hf_token)
+    print("Logged in to the Hub")
 
 # Step 2: Prepare model config
 print("Step 2: Prepare model config")
@@ -143,7 +148,6 @@ if use_peft:
 # Step 9: Push the model to the Hub
 if hf_token:
     print("Step 9: Push the model to the Hub")
-    login(token=hf_token)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.push_to_hub(hf_repo_name)
     model.push_to_hub(hf_repo_name)
