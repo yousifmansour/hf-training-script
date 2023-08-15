@@ -9,6 +9,8 @@
   "data_dir": null,
   "//": "defaults to ./output",
   "output_dir": null,
+  "//": "defaults to 1024",
+  "model_max_length": null,
   "//": "defaults to 1",
   "batch_size": null,
   "//": "defaults to 1",

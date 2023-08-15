@@ -23,8 +23,9 @@ print("Step 1: Load arguments")
 load_in_4bit = get_config_value(config, "load_in_4bit", True)
 load_in_8bit = get_config_value(config, "load_in_8bit", False)
 model_name = get_config_value(config, "model_name", "gpt2")
-dataset_dir = get_config_value(config, "dataset_dir", "./data")
+data_dir = get_config_value(config, "data_dir", "./data")
 output_dir = get_config_value(config, "output_dir", "./output")
+model_max_length = get_config_value(config, "model_max_length", 1024)
 batch_size = get_config_value(config, "batch_size", 1)
 gradient_accumulation_steps = get_config_value(
     config, "gradient_accumulation_steps", 1)
@@ -68,12 +69,11 @@ print("Step 4: Load the dataset")
 # dataset = load_dataset("text", data_dir=dataset_dir, split="train")
 # read dataset_dir
 _texts = []
-for filename in os.listdir(dataset_dir):
-    with open(os.path.join(dataset_dir, filename), "r") as f:
+for filename in os.listdir(data_dir):
+    with open(os.path.join(data_dir, filename), "r") as f:
         _texts.append(f.read())
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model_max_length = tokenizer.model_max_length
 
 # Instead of filtering, we'll break texts into chunks
 chunks = []
