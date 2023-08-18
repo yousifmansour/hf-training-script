@@ -70,7 +70,7 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 # Step 4: Load the dataset
-print("Step 4: Load the dataset")
+print("Step 4: Load the dataset (ignore below tokenizer warning)")
 # dataset = load_dataset("text", data_dir=dataset_dir, split="train")
 # read dataset_dir
 _texts = []
@@ -83,7 +83,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 # Instead of filtering, we'll break texts into chunks
 chunks = []
 for text in _texts:
-    tokenized_text = tokenizer.encode(text, add_special_tokens=True)
+    tokenized_text = tokenizer.encode(text)
     for i in range(0, len(tokenized_text), model_max_length):
         chunk = tokenized_text[i:i+model_max_length]
         chunks.append(tokenizer.decode(chunk))
@@ -108,6 +108,7 @@ training_args = TrainingArguments(
 print("Step 6: Define the LoraConfig, if using PEFT")
 peft_config = None
 if use_peft:
+    print("Note: when using PEFT, consider specifying `target_modules` for better performance")
     peft_config = LoraConfig(
         r=peft_lora_r,
         lora_alpha=peft_lora_alpha,
@@ -146,7 +147,7 @@ if use_peft:
     model.save_pretrained(output_merged_dir, safe_serialization=True)
 
 # Step 9: Push the model to the Hub
-if hf_token:
+if hf_token and hf_repo_name:
     print("Step 9: Push the model to the Hub")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.push_to_hub(hf_repo_name)

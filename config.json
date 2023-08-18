@@ -1,7 +1,7 @@
 {
   "//": "Folders of the data to train on and to save the model to",
   "data_dir": "./data",
-  "output_dir": "./output",
+  "output_dir": "../output",
 
   "//": "HuggingFace credentials",
   "hf_token": null,
@@ -22,6 +22,6 @@
 
   "//": "Parameter efficient fine tuning (PEFT) arguments",
   "use_peft": true,
-  "peft_lora_r": 64,
+  "peft_lora_r": 16,
   "peft_lora_alpha": 16
 }
